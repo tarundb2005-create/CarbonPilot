@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-
+from .executor import execute_workload
 from .feedback import (
     calculate_feedback,
     get_workload_profiles,
@@ -143,3 +143,19 @@ def get_profiles():
         )
         for name, factor in profiles.items()
     ]
+@app.post("/execute")
+def execute(
+    workload_name: str,
+    command: str,
+):
+    result = execute_workload(
+        workload_name=workload_name,
+        command=command,
+    )
+
+    return {
+        "workload_name": result.workload_name,
+        "status": result.status,
+        "execution_time_seconds": result.execution_time_seconds,
+        "message": result.message,
+    }
