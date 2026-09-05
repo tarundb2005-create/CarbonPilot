@@ -12,6 +12,7 @@ spec:
       labels:
         app: carbonpilot
     spec:
+      serviceAccountName: carbonpilot
       containers:
         - name: carbonpilot
           image: carbonpilot:latest
