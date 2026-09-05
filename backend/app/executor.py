@@ -1,78 +1,95 @@
-import subprocess
-import time
-from dataclasses import dataclass
+from kubernetes import client, config
+from kubernetes.client.rest import ApiException
 
 
-@dataclass
-class ExecutionResult:
-    workload_name: str
-    status: str
-    execution_time_seconds: float
-    message: str
+def load_kubernetes_config():
+    """
+    Load Kubernetes configuration.
 
-
-def execute_workload(
-    workload_name: str,
-    command: str,
-) -> ExecutionResult:
-
-    start_time = time.time()
+    When running locally, use the user's kubeconfig.
+    When running inside Kubernetes, use in-cluster configuration.
+    """
 
     try:
-        result = subprocess.run(
-            command,
-            shell=True,
-            capture_output=True,
-            text=True,
-            timeout=300,
+        config.load_kube_config()
+    except Exception:
+        config.load_incluster_config()
+
+
+def create_workload_job(
+    workload_name: str,
+    runtime_minutes: int,
+) -> dict:
+    """
+    Create a Kubernetes Job for a CarbonPilot workload.
+    """
+
+    load_kubernetes_config()
+
+    batch_api = client.BatchV1Api()
+
+    safe_name = workload_name.lower().replace("_", "-")
+
+    job_name = f"carbonpilot-{safe_name}"
+
+    job = client.V1Job(
+        metadata=client.V1ObjectMeta(
+            name=job_name,
+            labels={
+                "app": "carbonpilot",
+                "workload": safe_name,
+            },
+        ),
+        spec=client.V1JobSpec(
+            backoff_limit=1,
+            ttl_seconds_after_finished=300,
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(
+                    labels={
+                        "app": "carbonpilot-workload",
+                        "workload": safe_name,
+                    }
+                ),
+                spec=client.V1PodSpec(
+                    restart_policy="Never",
+                    containers=[
+                        client.V1Container(
+                            name="workload",
+                            image="busybox:1.36",
+                            command=[
+                                "sh",
+                                "-c",
+                                (
+                                    f'echo "CarbonPilot executing {workload_name}"; '
+                                    f'echo "Simulated runtime: {runtime_minutes} minutes"; '
+                                    'echo "Workload completed successfully"'
+                                ),
+                            ],
+                        )
+                    ],
+                ),
+            ),
+        ),
+    )
+
+    try:
+        response = batch_api.create_namespaced_job(
+            namespace="default",
+            body=job,
         )
 
-        execution_time = round(
-            time.time() - start_time,
-            2,
-        )
+        return {
+            "status": "SUBMITTED",
+            "job_name": response.metadata.name,
+            "workload": workload_name,
+        }
 
-        if result.returncode == 0:
-            return ExecutionResult(
-                workload_name=workload_name,
-                status="COMPLETED",
-                execution_time_seconds=execution_time,
-                message=result.stdout.strip()
-                or "Workload executed successfully.",
-            )
+    except ApiException as error:
+        if error.status == 409:
+            return {
+                "status": "ALREADY_EXISTS",
+                "job_name": job_name,
+                "workload": workload_name,
+            }
 
-        return ExecutionResult(
-            workload_name=workload_name,
-            status="FAILED",
-            execution_time_seconds=execution_time,
-            message=result.stderr.strip()
-            or "Workload execution failed.",
-        )
-
-    except subprocess.TimeoutExpired:
-
-        execution_time = round(
-            time.time() - start_time,
-            2,
-        )
-
-        return ExecutionResult(
-            workload_name=workload_name,
-            status="TIMEOUT",
-            execution_time_seconds=execution_time,
-            message="Workload exceeded the execution timeout.",
-        )
-
-    except Exception as exc:
-
-        execution_time = round(
-            time.time() - start_time,
-            2,
-        )
-
-        return ExecutionResult(
-            workload_name=workload_name,
-            status="ERROR",
-            execution_time_seconds=execution_time,
-            message=str(exc),
-        )
+        raise

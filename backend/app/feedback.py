@@ -1,26 +1,10 @@
 from dataclasses import dataclass
 
 
-# ---------------------------------------------------------
-# IN-MEMORY WORKLOAD LEARNING PROFILES
-# ---------------------------------------------------------
-# Stores the learned energy correction factor for each
-# workload.
-#
-# Example:
-# {
-#     "ml-training-01": 1.25
-# }
-#
-# Later, this can be replaced with PostgreSQL.
-# ---------------------------------------------------------
-
+# In-memory workload learning profiles.
+# PostgreSQL will replace this later.
 workload_profiles = {}
 
-
-# ---------------------------------------------------------
-# FEEDBACK RESULT
-# ---------------------------------------------------------
 
 @dataclass
 class FeedbackResult:
@@ -35,10 +19,6 @@ class FeedbackResult:
     updated_energy_factor: float
 
 
-# ---------------------------------------------------------
-# CALCULATE FEEDBACK
-# ---------------------------------------------------------
-
 def calculate_feedback(
     workload_name: str,
     predicted_energy_kwh: float,
@@ -52,24 +32,20 @@ def calculate_feedback(
             "Predicted energy must be greater than zero."
         )
 
-    if actual_energy_kwh <= 0:
-        raise ValueError(
-            "Actual energy must be greater than zero."
-        )
-
     if predicted_co2e_kg <= 0:
         raise ValueError(
             "Predicted CO2e must be greater than zero."
         )
 
-    if actual_co2e_kg <= 0:
+    if actual_energy_kwh < 0:
         raise ValueError(
-            "Actual CO2e must be greater than zero."
+            "Actual energy cannot be negative."
         )
 
-    # -----------------------------------------------------
-    # Calculate prediction errors
-    # -----------------------------------------------------
+    if actual_co2e_kg < 0:
+        raise ValueError(
+            "Actual CO2e cannot be negative."
+        )
 
     energy_error = (
         (actual_energy_kwh - predicted_energy_kwh)
@@ -81,28 +57,11 @@ def calculate_feedback(
         / predicted_co2e_kg
     ) * 100
 
-    # -----------------------------------------------------
-    # Calculate learning factor
-    # -----------------------------------------------------
-    #
-    # Example:
-    #
-    # Predicted = 4 kWh
-    # Actual    = 5 kWh
-    #
-    # Factor = 5 / 4 = 1.25
-    #
-    # Future prediction:
-    #
-    # Base prediction × 1.25
-    # -----------------------------------------------------
-
     new_factor = (
         actual_energy_kwh
         / predicted_energy_kwh
     )
 
-    # Store learned factor
     workload_profiles[workload_name] = new_factor
 
     return FeedbackResult(
@@ -118,7 +77,6 @@ def calculate_feedback(
             energy_error,
             2,
         ),
-
         predicted_co2e_kg=round(
             predicted_co2e_kg,
             4,
@@ -131,7 +89,6 @@ def calculate_feedback(
             co2e_error,
             2,
         ),
-
         updated_energy_factor=round(
             new_factor,
             4,
@@ -139,18 +96,14 @@ def calculate_feedback(
     )
 
 
-# ---------------------------------------------------------
-# GET LEARNED ENERGY FACTOR
-# ---------------------------------------------------------
-
 def get_energy_factor(
     workload_name: str,
 ) -> float:
     """
-    Return the learned correction factor for a workload.
+    Return the learned correction factor.
 
-    If CarbonPilot has never seen the workload,
-    return 1.0, meaning no correction.
+    If CarbonPilot has never seen this workload,
+    use 1.0.
     """
 
     return workload_profiles.get(
@@ -159,15 +112,9 @@ def get_energy_factor(
     )
 
 
-# ---------------------------------------------------------
-# GET ALL WORKLOAD PROFILES
-# ---------------------------------------------------------
-
 def get_workload_profiles():
     """
     Return all learned workload profiles.
-
-    Used by the /profiles API endpoint.
     """
 
-    return workload_profiles
+    return workload_profiles.copy()
