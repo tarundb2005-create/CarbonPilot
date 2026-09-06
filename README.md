@@ -1,458 +1,375 @@
-# CarbonPilot
-# CarbonPilot 🌱
+🌱 CarbonPilot
 
-### Carbon-Aware Workload Scheduling with Adaptive Feedback
+Carbon-Aware Kubernetes Workload Scheduling
 
-CarbonPilot is a carbon-aware workload scheduling engine designed to reduce the operational carbon footprint of cloud and Kubernetes workloads without violating workload deadlines.
+CarbonPilot is a carbon-aware Kubernetes workload scheduling system that predicts workload energy and carbon impact, considers workload deadlines, and decides whether a flexible workload should RUN now or DEFER to a lower-carbon execution window.
 
-Instead of simply reacting to the current grid carbon intensity, CarbonPilot combines:
+Problem Statement
 
-- Carbon-intensity forecasts
-- Workload energy estimation
-- Deadline-aware scheduling
-- Workload-level carbon estimation
-- Execution feedback
-- Adaptive workload energy profiles
+Cloud and ML workloads consume electricity while grid carbon intensity changes over time. Traditional Kubernetes scheduling primarily focuses on resources and execution, rather than using temporal flexibility to reduce carbon impact.
 
-The long-term goal is to create an attribution-in-the-loop control system:
+Key question: If a workload does not need to run immediately, can it execute at a lower-carbon time without violating its deadline?
 
+Research Gap
 
-Workload
-   ↓
-Energy + Carbon Prediction
-   ↓
-Carbon-Aware Scheduler
-   ↓
-RUN / DEFER
-   ↓
-Workload Execution
-   ↓
-Actual Energy / Carbon
-   ↓
-Workload-Level Feedback
-   ↓
-Prediction Error
-   ↓
-Adaptive Profile Update
-   ↓
-Improved Next Prediction
+Existing approaches can address carbon monitoring, energy estimation, or workload scheduling independently.
 
-🚀 Problem
+CarbonPilot integrates carbon intensity, energy prediction, deadline-aware scheduling, RUN/DEFER decisions, Kubernetes execution, and feedback-based learning into one closed-loop prototype.
 
-Modern cloud infrastructure and AI workloads consume significant amounts of electricity.
-Most carbon-aware computing approaches make scheduling decisions using external carbon-intensity signals:
-Carbon Intensity → Scheduler → Workload
-However, the actual energy consumption of workloads varies significantly depending on:
-CPU requirements
-Memory usage
-Runtime
-Hardware
-Workload type
-Execution conditions
-This creates a gap between:
-Predicted workload impact
-and
-Actual workload impact
-CarbonPilot addresses this gap by introducing workload-level feedback into the scheduling process.
+Proposed Solution
 
-💡 Solution
+ML Engineer
+    ↓
+React Dashboard
+    ↓
+FastAPI Backend
+    ↓
+CarbonPilot Scheduler
+    ├── Energy Prediction
+    ├── Carbon Calculation
+    └── Deadline Check
+            ↓
+       RUN / DEFER
+        ↓       ↓
+   Kubernetes  Cleaner
+      Job      Window
+        ↓
+    Workload
+        ↓
+     Feedback
+        ↓
+ Learned Profile
 
-CarbonPilot estimates the energy and carbon impact of a workload before execution and determines whether it should run immediately or be deferred to a lower-carbon execution window.
-After execution, actual workload measurements can be submitted to CarbonPilot.
-The system calculates the prediction error and learns a correction factor for that workload.
-The learned factor is then automatically applied to future predictions.
-Example
-Initial prediction:
-Predicted Energy = 0.048 kWh
-Actual Energy    = 0.060 kWh
-Prediction Error = +25%
-CarbonPilot learns:
-Energy Factor = 1.25
-Next prediction:
-0.048 × 1.25 = 0.060 kWh
-This creates an adaptive feedback loop instead of relying on a static energy model.
+How It Works
 
-🧠 Key Innovation
+1. Workload Submission
 
-CarbonPilot is not simply a carbon-aware scheduler.
-The core idea is:
-Workload carbon attribution → feedback error → adaptive scheduling
-The system is designed around three layers:
-1. Prediction
-Estimate workload energy and CO₂e before execution.
-2. Decision
-Select a lower-carbon execution window while respecting the workload deadline.
-3. Learning
-Compare predicted and actual workload energy/carbon and update the workload profile.
-             ┌──────────────────────┐
-             │ CarbonPilot Controller│
-             └───────────┬──────────┘
-                         │
-          ┌──────────────┼──────────────┐
-          ↓              ↓              ↓
-      Prediction      Scheduling      Learning
-          │              │              │
-          └──────────────┼──────────────┘
-                         ↓
-                  Workload Execution
-                         ↓
-                  Actual Measurement
-                         ↓
-                    Feedback
-                         ↓
-                  Profile Update
-⚙️ Current Features
+The user provides workload name, CPU, memory, estimated runtime, and deadline.
 
-The current MVP implements:
- FastAPI backend
- Workload submission API
- Carbon forecast model
- Energy estimation
- CO₂e calculation
- Deadline-aware scheduling
- RUN / DEFER decisions
- Recommended delay calculation
- Workload-level feedback
- Energy prediction error calculation
- CO₂e prediction error calculation
- Adaptive workload energy correction factor
- Learned factor applied to future predictions
- Workload profile API
- 
-🏗️ Architecture
-                       CarbonPilot
-                           │
-                           ▼
-                 ┌───────────────────┐
-                 │  FastAPI Gateway  │
-                 └─────────┬─────────┘
-                           │
-             ┌─────────────┼─────────────┐
-             ▼             ▼             ▼
-       Workload API   Feedback API   Profile API
-             │             │
-             ▼             ▼
-       ┌──────────┐   ┌──────────────┐
-       │ Scheduler│   │ Feedback     │
-       │          │   │ Engine       │
-       └────┬─────┘   └──────┬───────┘
-            │                │
-            ▼                ▼
-     Carbon Forecast    Prediction Error
-            │                │
-            ▼                ▼
-      RUN / DEFER       Learned Factor
-            │                │
-            └────────┬───────┘
-                     ▼
-              Future Prediction
-              
-📁 Project Structure
-CarbonPilot/
-│
-├── backend/
-│   │
-│   ├── app/
-│   │   ├── main.py
-│   │   ├── scheduler.py
-│   │   ├── carbon.py
-│   │   ├── energy.py
-│   │   ├── feedback.py
-│   │   ├── schemas.py
-│   │   └── services/
-│   │       └── carbon_service.py
-│   │
-│   └── requirements.txt
-│
-├── .gitignore
-└── README.md
+2. Prediction
 
-🛠️ Technology Stack
-Backend
-Python
-FastAPI
-Uvicorn
-Pydantic
-Scheduling
-Carbon-intensity forecasting
-Deadline-aware window selection
-Energy estimation
-CO₂e estimation
-Adaptive correction factors
-Planned Infrastructure
-Kubernetes
-Container-level energy telemetry
-Kepler integration
-Persistent workload profiles
-Real-time carbon-intensity APIs
+CarbonPilot estimates energy consumption, CO₂e, and carbon intensity.
 
-🚀 Getting Started
-1. Clone the repository
-git clone https://github.com/tarundb2005-create/CarbonPilot.git
-cd CarbonPilot
-2. Create a virtual environment
-python3 -m venv .venv
-3. Activate the environment
-macOS / Linux
-source .venv/bin/activate
-Windows
-.venv\Scripts\activate
-4. Install dependencies
-cd backend
-pip install -r requirements.txt
-5. Start the API
-uvicorn app.main:app --reload
-The API will be available at:
-http://127.0.0.1:8000
-Interactive API documentation:
-http://127.0.0.1:8000/docs
+3. Scheduling
 
-📡 API Endpoints
-Health Check
-GET /health
-Example response:
-{
-  "status": "healthy",
-  "service": "CarbonPilot"
-}
-Submit Workload
-POST /workloads
-CarbonPilot evaluates the workload against available carbon-intensity windows and returns a scheduling decision.
-Example:
-{
-  "name": "ml-training-01",
-  "cpu": 2,
-  "memory_gb": 4,
-  "estimated_runtime_minutes": 30,
-  "deadline_minutes": 180
-}
-Example response:
-{
-  "workload": "ml-training-01",
-  "decision": "DEFER",
-  "recommended_delay_minutes": 90,
-  "predicted_energy_kwh": 0.048,
-  "predicted_co2e_kg": 0.0144,
-  "carbon_intensity_g_per_kwh": 300,
-  "reason": "A lower-carbon execution window is available without violating the deadline."
-}
+The scheduler determines whether to RUN immediately or DEFER to a cleaner window while respecting the deadline.
 
-🔄 Feedback API
+4. Kubernetes Execution
 
-After execution, actual workload measurements can be submitted:
-POST /feedback
-Example:
-{
-  "workload_name": "ml-training-01",
-  "predicted_energy_kwh": 0.048,
-  "actual_energy_kwh": 0.060,
-  "predicted_co2e_kg": 0.0144,
-  "actual_co2e_kg": 0.018
-}
-CarbonPilot calculates:
-Energy Error = +25%
-CO₂e Error   = +25%
-Learned Factor = 1.25
-Example response:
-{
-  "workload_name": "ml-training-01",
-  "predicted_energy_kwh": 0.048,
-  "actual_energy_kwh": 0.06,
-  "energy_error_percent": 25,
-  "predicted_co2e_kg": 0.0144,
-  "actual_co2e_kg": 0.018,
-  "co2e_error_percent": 25,
-  "updated_energy_factor": 1.25,
-  "message": "Prediction profile updated using actual workload measurements."
-}
+Approved workloads can be submitted as actual Kubernetes Jobs through the Kubernetes API.
 
-📊 Workload Profiles
+5. Feedback Learning
 
-CarbonPilot stores learned workload energy correction factors.
-GET /profiles
-Example:
-[
-  {
-    "workload_name": "ml-training-01",
-    "energy_factor": 1.25,
-    "status": "LEARNED"
-  }
-]
-Future predictions for the same workload automatically use the learned factor.
-🔬 Adaptive Feedback Example
-First execution
+Predicted and actual measurements are compared to calculate prediction error and a workload-specific correction factor.
+
 Prediction
-   ↓
-0.048 kWh
-   ↓
-Actual execution
-   ↓
-0.060 kWh
-   ↓
-Error = +25%
-   ↓
-Learn factor = 1.25
-Next execution
-Base estimate
-   ↓
-0.048 kWh
-   ↓
-Apply learned factor
-   ↓
-0.048 × 1.25
-   ↓
-0.060 kWh
-This demonstrates the fundamental adaptive-learning mechanism of CarbonPilot.
-📈 Scalability
-CarbonPilot is designed as a modular control layer rather than a replacement for the underlying scheduler.
-The architecture can scale from:
-Single workload
-      ↓
-Multiple workloads
-      ↓
-Kubernetes cluster
-      ↓
-Multi-node cluster
-      ↓
-Multi-region infrastructure
-The scheduler can eventually integrate with:
+    ↓
+Execution
+    ↓
+Actual Measurement
+    ↓
+Error Calculation
+    ↓
+Correction Factor
+    ↓
+Workload Profile
+    ↓
+Better Future Prediction
+
+Key Features
+
+🌱 Carbon-aware scheduling
+
+⚡ Energy prediction
+
+📊 CO₂e estimation
+
+⏱ Deadline-aware scheduling
+
+▶️ RUN / DEFER decisions
+
+☸️ Kubernetes Job execution
+
+🔐 Kubernetes RBAC
+
+🔄 Feedback-based learning
+
+🖥️ React frontend
+
+🚀 FastAPI backend
+
+🐳 Docker deployment
+
+🗄️ PostgreSQL persistence (next implementation step)
+
+Technology Stack
+
+Layer
+
+Technology
+
+Frontend
+
+React + Vite
+
+Backend
+
+Python + FastAPI
+
+Validation
+
+Pydantic
+
+Infrastructure
+
+Docker
+
+Orchestration
+
 Kubernetes
-Kubernetes Jobs
-Batch workloads
-ML training workloads
-AI inference workloads
-CI/CD workloads
-Cloud compute infrastructure
-Persistent storage can replace the current in-memory workload profiles as the system moves toward production deployment.
 
-🔐 Security Considerations
+Permissions
 
-The current MVP focuses on the scheduling and learning engine.
-Production deployment will add:
-API authentication
-Role-based access control
-Secure telemetry collection
-Input validation
-Rate limiting
-Audit logs
-Encrypted communication
-Secure Kubernetes service accounts
-Tenant isolation
+Kubernetes RBAC
 
-🗺️ Roadmap
+Persistence
 
-Phase 1 — MVP
- Carbon-aware scheduling
- Energy estimation
- Deadline constraints
- CO₂e estimation
- Feedback API
- Adaptive workload profiles
- 
-Phase 2 — Real Execution
+PostgreSQL (planned/current Phase 5 work)
 
- Execute real workloads
- Collect actual resource usage
- Automatic feedback generation
- Remove manual feedback dependency
- 
-Phase 3 — Kubernetes
+API
 
- Kubernetes Job integration
- Scheduler/controller integration
- Pod-level workload attribution
- Node-level energy telemetry
- 
-Phase 4 — Advanced Carbon Intelligence
+Health
 
- Real-time carbon-intensity APIs
- Carbon forecasting
- Uncertainty-aware scheduling
- Multi-node scheduling
- Multi-region scheduling
- Cost + carbon + SLO optimization
- 
-Phase 5 — Production
+curl http://127.0.0.1:8002/health
 
- Persistent workload profiles
- Authentication
- Multi-tenant support
- Monitoring
- Auditability
- Production deployment
- 
-🎯 Target Users
+Submit Workload
 
-CarbonPilot is primarily designed for organizations operating:
-Cloud infrastructure
-Kubernetes clusters
-AI/ML workloads
-Batch processing systems
-HPC workloads
-CI/CD infrastructure
-Large-scale compute platforms
-Potential users include:
-Platform engineering teams
-DevOps teams
-Cloud infrastructure teams
-ML infrastructure teams
-Sustainability engineering teams
-Data-center operators
+curl -X POST http://127.0.0.1:8002/workloads   -H "Content-Type: application/json"   -d '{
+    "name": "demo-workload",
+    "cpu": 1,
+    "memory_gb": 2,
+    "estimated_runtime_minutes": 1,
+    "deadline_minutes": 120
+  }'
 
-🌍 Expected Impact
+Execute Workload
 
-CarbonPilot aims to reduce operational carbon emissions by intelligently shifting flexible workloads toward cleaner execution windows while respecting deadlines and operational constraints.
-The system focuses on a practical principle:
-Don't just predict carbon. Learn from what actually happened.
+curl -X POST http://127.0.0.1:8002/execute   -H "Content-Type: application/json"   -d '{
+    "name": "phase5-demo",
+    "cpu": 1,
+    "memory_gb": 2,
+    "estimated_runtime_minutes": 1,
+    "deadline_minutes": 120
+  }'
 
-⚠️ Current Limitations
+Kubernetes Validation
 
-The current MVP uses:
-In-memory workload profiles
-Simulated/local carbon forecast data
-Estimated workload energy
-API-submitted actual measurements
-It does not yet claim production-grade energy measurement or automatic Kubernetes execution.
-These are part of the next implementation phases.
+kubectl get jobs
+kubectl get pods
+kubectl logs job/<job-name>
 
-🏆 Hackathon Focus
-CarbonPilot's core technical contribution is an adaptive carbon-aware scheduling loop:
+Feedback
+
+curl -X POST http://127.0.0.1:8002/feedback   -H "Content-Type: application/json"   -d '{
+    "workload_name": "demo-workload",
+    "predicted_energy_kwh": 0.0005,
+    "actual_energy_kwh": 0.0006,
+    "predicted_co2e_kg": 0.0001,
+    "actual_co2e_kg": 0.00012
+  }'
+
+Learned Profiles
+
+curl http://127.0.0.1:8002/profiles
+
+Validation Results
+
+The prototype has been validated for:
+
+FastAPI health endpoint
+
+Workload scheduling
+
+RUN/DEFER decisions
+
+Feedback calculation
+
+Learned workload profiles
+
+Kubernetes deployment
+
+Kubernetes RBAC
+
+Actual Kubernetes Job creation and execution
+
+React frontend → FastAPI backend communication
+
+Example demonstrated Kubernetes result:
+
+carbonpilot-phase5-final-demo
+Complete 1/1
+
+Example execution log:
+
+CarbonPilot executing phase5-final-demo
+Simulated runtime: 1 minutes
+Workload completed successfully
+
+Example feedback result:
+
+Predicted energy = 0.0005 kWh
+Actual energy    = 0.0006 kWh
+Prediction error = 20%
+Correction factor = 1.2
+
+Frontend Architecture
+
+React
+  ↓
+GET /health
+GET /profiles
+POST /workloads
+  ↓
+FastAPI
+  ↓
+CarbonPilot Scheduler
+  ↓
+Decision Response
+  ↓
+React Dashboard
+
+The frontend displays decisions generated by the backend; it does not generate random scheduling values.
+
+Feedback Learning
+
+The current prototype maintains learned workload profiles in memory.
+
+Example:
+
+round4c-demo
+energy_factor = 1.2
+status = LEARNED
+
+The next implementation step is PostgreSQL persistence so profiles and execution history survive backend restarts.
+
+Current Status
+
+Component
+
+Status
+
+FastAPI backend ✅
+
+Workload API ✅
+
+Energy prediction ✅
+
+Carbon calculation ✅
+
+Deadline-aware scheduling ✅
+
+RUN / DEFER ✅
+
+Feedback calculation ✅
+
+Workload learning profile ✅
+
+Docker ✅
+
+Kubernetes deployment ✅
+
+Kubernetes Job execution ✅
+
+Kubernetes RBAC ✅
+
+React frontend ✅
+
+Frontend/backend integration ✅
+
+PostgreSQL persistence 🔄
+
+Real energy telemetry 🔮
+
+Live carbon-intensity API 🔮
+
+Limitations
+
+The current prototype uses modeled/simulated carbon and energy inputs. Actual energy measurements are currently supplied through the feedback interface rather than collected directly from physical hardware or cluster telemetry.
+
+Future production integration can add real-time carbon APIs and CPU/GPU energy telemetry.
+
+Roadmap
+
+Phase 1 — Core Foundation
+
+Carbon and energy modeling with initial scheduling logic.
+
+Phase 2 — Containerized Execution
+
+Dockerized workload execution.
+
+Phase 3 — Kubernetes Integration
+
+Kubernetes deployment, Jobs, and RBAC.
+
+Phase 4 — Adaptive Feedback
+
+Prediction error calculation and workload-specific correction factors.
+
+Phase 5 — Final Validation & Polish
+
+PostgreSQL persistence, execution history, impact visualization, end-to-end validation, and final demo/presentation polish.
+
+Round 3 Evaluation Positioning
+
+Technical Depth & Implementation
+
+CarbonPilot combines energy/carbon prediction, deadline-aware scheduling, Kubernetes execution, RBAC, and feedback learning.
+
+Functionality & Prototype Quality
+
+The prototype works end-to-end from workload submission and scheduling to actual Kubernetes Job execution.
+
+Innovation & Originality
+
+CarbonPilot closes the loop between prediction, scheduling, execution, and workload-specific learning.
+
+Real-World Impact
+
+CarbonPilot targets flexible ML, batch, and cloud workloads that can potentially be shifted toward lower-carbon execution periods.
+
+Core Innovation
+
+Traditional Kubernetes asks: “Where should this workload run?”
+
+CarbonPilot adds: “When should this workload run?”
+
+The long-term vision is to continuously balance:
+
+Carbon
+  +
+Energy
+  +
+Performance
+  +
+Deadline
+  +
+Workload History
+
+Conclusion
+
+CarbonPilot transforms carbon awareness from a monitoring problem into a scheduling and execution decision.
+
 Predict
-   ↓
+  ↓
 Schedule
-   ↓
+  ↓
 Execute
-   ↓
+  ↓
 Measure
-   ↓
-Attribute
-   ↓
-Compare
-   ↓
+  ↓
 Learn
-   ↓
-Schedule Better
-The objective is to move carbon-aware computing from a static forecast-following system toward an adaptive, workload-aware control system.
-📄 License
-This project is currently developed as a hackathon prototype.
+  ↓
+Improve
 
-### One important point
-
-I deliberately wrote the README so we **don't overclaim**.
-
-For the hackathon, that's valuable. We should clearly distinguish:
-
-**Already implemented**
-→ FastAPI + scheduler + feedback + adaptive factor.
-
-**Next implementation**
-→ real workload execution + telemetry + automatic attribution.
-
-That makes the GitHub repository credible when judges inspect it.
-
-After saving it as `README.md`, commit and push:
-
-bash
-git add README.md
-git commit -m "docs: add project README"
-git push
+CarbonPilot — Making Kubernetes workload execution more carbon-aware.
